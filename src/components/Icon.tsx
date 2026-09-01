@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-export type IconName = 'home' | 'calendar' | 'book' | 'chart' | 'info' | 'settings' | 'play' | 'check' | 'arrow' | 'clock' | 'swap' | 'close' | 'plus' | 'minus' | 'sun' | 'moon' | 'chevron' | 'trophy' | 'flame' | 'note' | 'external' | 'search' | 'refresh' | 'sparkle' | 'dumbbell';
+export type IconName = 'home' | 'calendar' | 'book' | 'chart' | 'info' | 'settings' | 'play' | 'check' | 'arrow' | 'clock' | 'swap' | 'close' | 'plus' | 'minus' | 'sun' | 'moon' | 'chevron' | 'trophy' | 'flame' | 'note' | 'external' | 'search' | 'refresh' | 'sparkle' | 'dumbbell' | 'download';
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -35,8 +35,8 @@ export function Icon({ name, size = 20, ...props }: IconProps) {
     refresh: <><path d="M20 11a8 8 0 0 0-14.7-4L3 10" /><path d="M3 5v5h5M4 13a8 8 0 0 0 14.7 4L21 14" /><path d="M21 19v-5h-5" /></>,
     sparkle: <><path d="m12 3 1.1 4.2L17 9l-3.9 1.8L12 15l-1.1-4.2L7 9l3.9-1.8z" /><path d="m19 14 .5 1.8L21 17l-1.5.7L19 20l-.5-2.3L17 17l1.5-1.2z" /></>,
     dumbbell: <><path d="M6 8v8M3.5 10v4M18 8v8M20.5 10v4M6 12h12" /></>,
+    download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></>,
   };
 
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" {...common} {...props}>{paths[name]}</svg>;
 }
-

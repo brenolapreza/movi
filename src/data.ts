@@ -1,4 +1,4 @@
-import type { Exercise, Person, Weekday, WorkoutDay, WorkoutExercise } from './types';
+import type { Exercise, ExerciseMedia, Person, Weekday, WorkoutDay, WorkoutExercise } from './types';
 
 export const dayLabels: Record<Weekday, string> = {
   seg: 'Seg',
@@ -274,6 +274,57 @@ export const exerciseCatalog: Record<string, Exercise> = {
     easierAlternative: 'Elevação lateral com elástico leve.', substitutes: ['shoulder-press', 'face-pull'],
   },
 };
+
+const exercisedbGif = (id: string): ExerciseMedia => ({
+  gifUrl: `https://static.exercisedb.dev/media/${id}.gif`,
+  gifSourceUrl: 'https://docs.ascendapi.com/products/edb-v1/overview',
+  gifSourceLabel: 'ExerciseDB · AscendAPI',
+  youtubeUrl: '',
+});
+
+const youtubeSearch = (term: string): string => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${term} execução correta vídeo curto`)}`;
+
+const withYoutube = (media: ExerciseMedia, term: string): ExerciseMedia => ({ ...media, youtubeUrl: youtubeSearch(term) });
+
+export const exerciseMedia: Record<string, ExerciseMedia> = {
+  'chest-press': withYoutube(exercisedbGif('DOoWcnA'), 'machine chest press'),
+  'cable-row': withYoutube(exercisedbGif('fUBheHs'), 'seated cable row'),
+  'lat-pulldown': withYoutube(exercisedbGif('LEprlgG'), 'lat pulldown'),
+  'shoulder-press': withYoutube(exercisedbGif('67n3r98'), 'machine shoulder press'),
+  'triceps-pushdown': withYoutube(exercisedbGif('3ZflifB'), 'cable triceps pushdown'),
+  'dead-bug': withYoutube(exercisedbGif('iny3m5y'), 'dead bug exercise'),
+  'leg-press': withYoutube(exercisedbGif('10Z2DXU'), '45 degree leg press'),
+  'leg-curl': withYoutube(exercisedbGif('Zg3XY7P'), 'seated leg curl machine'),
+  'goblet-squat': withYoutube(exercisedbGif('yn8yg1r'), 'goblet squat'),
+  'hip-thrust': {
+    gifUrl: 'https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyemtqMXEwYXdxc2RuYmc0cmJicDg2Y2ZlZ3M2ejk4aHVyeGtqcTJlZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/j72Y2ZnQiho4xcjuSP/giphy.gif',
+    gifSourceUrl: 'https://giphy.com/gifs/gymshark-hip-thrust-j72Y2ZnQiho4xcjuSP',
+    gifSourceLabel: 'GIPHY · Gymshark',
+    youtubeUrl: youtubeSearch('hip thrust'),
+  },
+  'calf-raise': withYoutube(exercisedbGif('bJYHBIN'), 'standing calf raise'),
+  'plank': withYoutube(exercisedbGif('VBAWRPG'), 'front plank'),
+  'incline-press': withYoutube(exercisedbGif('PDaMuyV'), 'dumbbell incline press'),
+  'face-pull': {
+    gifUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNmZoMDZ6cGljMjUxdHhpOHIyaTBlcGQ1cndkNHdvM3R2MHhwaW4zZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RXPDb9bI2v04mKbuXZ/giphy.gif',
+    gifSourceUrl: 'https://giphy.com/gifs/o2fitnessclubs-back-pulls-facepulls-RXPDb9bI2v04mKbuXZ',
+    gifSourceLabel: 'GIPHY · O2 Fitness Clubs',
+    youtubeUrl: youtubeSearch('face pull com corda'),
+  },
+  'dumbbell-curl': withYoutube(exercisedbGif('BU15nH4'), 'alternating dumbbell biceps curl'),
+  'overhead-triceps': withYoutube(exercisedbGif('2IxROQ1'), 'overhead cable triceps extension'),
+  'pallof-press': withYoutube(exercisedbGif('9pa4H5m'), 'band pallof press'),
+  'romanian-deadlift': withYoutube(exercisedbGif('rR0LJzx'), 'dumbbell romanian deadlift'),
+  'leg-extension': withYoutube(exercisedbGif('my33uHU'), 'leg extension machine'),
+  'hip-abduction': withYoutube(exercisedbGif('CHpahtl'), 'hip abduction machine'),
+  'assisted-pullup': withYoutube(exercisedbGif('kiJ4Z2K'), 'assisted pull up machine'),
+  'cable-curl': withYoutube(exercisedbGif('G08RZcQ'), 'cable biceps curl'),
+  'chest-supported-row': withYoutube(exercisedbGif('7vG5o25'), 'chest supported dumbbell row'),
+  'hack-squat': withYoutube(exercisedbGif('5VCj6iH'), 'hack squat'),
+  'lateral-raise': withYoutube(exercisedbGif('DsgkuIt'), 'dumbbell lateral raise'),
+};
+
+export const getExerciseMedia = (exerciseId: string): ExerciseMedia | undefined => exerciseMedia[exerciseId];
 
 const ex = (exerciseId: string, sets: number, reps: string, rest: number, cue: string): WorkoutExercise => ({ exerciseId, sets, reps, rest, cue });
 

@@ -12,6 +12,8 @@ As recomendações do app foram construídas a partir destas fontes consultadas 
 - [ACSM — Progression Models in Resistance Training for Healthy Adults](https://acsm.org/wp-content/uploads/2025/01/Progression-Models-in-Resistance-Training-for-Healthy-Adults-Simplified.pdf): iniciantes podem começar com 1–3 séries; a progressão deve ser gradual, priorizando técnica, e o descanso pode ser maior nos exercícios compostos.
 - [WHO — Global recommendations on physical activity for health](https://www.who.int/docs/default-source/physical-activity/information-sheet-global-recommendations-on-physical-activity-for-health/physical-activity-recommendations-18-64years.pdf): fortalecimento dos grandes grupos musculares em dois ou mais dias por semana e aumento progressivo para pessoas inativas.
 - [ACE — Exercise Library](https://www.acefitness.org/resources/everyone/exercise-library/): referência visual e de técnica para fichas de exercícios, padrões de movimento e erros comuns.
+- [ExerciseDB/AscendAPI — EXERCISEB V1](https://docs.ascendapi.com/products/edb-v1/overview): catálogo de GIFs demonstrativos por exercício e documentação da origem das URLs usadas nas fichas.
+- [GIPHY — O2 Fitness Clubs](https://giphy.com/gifs/o2fitnessclubs-back-pulls-facepulls-RXPDb9bI2v04mKbuXZ) e [GIPHY — Gymshark](https://giphy.com/gifs/gymshark-hip-thrust-j72Y2ZnQiho4xcjuSP): fontes atribuídas para os GIFs de face pull e hip thrust.
 - [NHS — Warming-up and cooling-down exercises](https://www.wsh.nhs.uk/CMS-Documents/Patient-leaflets/Physiotherapy/6655-1-Warming-up-and-cooling-down-exercises.pdf): aquecimento gradual para elevar a temperatura corporal e preparação antes do exercício.
 - [NHS — Safety Notice](https://www.leicspart.nhs.uk/wp-content/uploads/2017/11/134-Falls-service-stretching-and-strengthening-exercises.pdf): interrupção diante de sintomas novos, piora ou dor persistente e busca de orientação profissional quando necessário.
 
@@ -25,7 +27,8 @@ Essas fontes orientam o produto, mas não transformam o app em prescrição clí
 - A referência inicial é 2–3 séries de 8–15 repetições, ou tempo controlado no core, com 45–120 segundos de descanso.
 - A pessoa começa com uma carga que preserva a técnica e deixa aproximadamente 2–3 repetições possíveis. Ao alcançar o topo da faixa sem perder a forma, pode subir cerca de 2–5%.
 - “Breno” e “Letícia” têm identidades visuais diferentes, mas os exercícios não são tratados como masculinos ou femininos; a diferença está na prioridade e no volume distribuído.
-- O conteúdo de mídia não depende de hotlinking de imagens. Cada ficha usa uma ilustração nativa do app como fallback visual e aponta para a biblioteca ACE como referência externa.
+- Cada ficha exibe um GIF específico do movimento por meio do catálogo aberto ExerciseDB/AscendAPI; a ficha também mostra a origem da mídia e mantém a ilustração nativa do app como fallback quando o GIF não carregar.
+- Para facilitar a revisão em vídeo, cada ficha oferece uma busca específica no YouTube com o nome exato do movimento e os termos “execução correta” e “vídeo curto”. Como resultados do YouTube podem ser removidos ou mudar, o app não fixa um vídeo de terceiro sem confirmação de disponibilidade.
 
 ### Divisão semanal
 
@@ -61,7 +64,9 @@ Os dados de treino ficam em `src/data.ts`; os tipos ficam em `src/types.ts`; o e
 
 ## Implementação
 
-O projeto usa React + TypeScript + Vite, sem dependências de UI desnecessárias. A interface é responsiva, funciona em toque, possui navegação inferior no celular e sidebar no desktop, e suporta modo escuro/claro. A ilustração nativa de exercício é um fallback visual controlado pelo app; o link de referência ACE abre em nova aba.
+O projeto usa React + TypeScript + Vite, sem dependências de UI desnecessárias. A interface é responsiva, funciona em toque, possui navegação inferior no celular e sidebar no desktop, e suporta modo escuro/claro. A ficha de exercício prioriza o GIF demonstrativo, informa o provedor e oferece fallback visual controlado pelo app; o link de referência ACE abre em nova aba.
+
+Os GIFs do ExerciseDB/AscendAPI são consumidos pela URL oficial do provedor, sem serem baixados ou re-hospedados pelo app. O GIF do face pull vem do GIPHY e identifica O2 Fitness Clubs na ficha. Para um lançamento público/comercial, confirme os termos atuais de uso do provedor ou substitua as URLs por arquivos licenciados diretamente para o projeto.
 
 Para rodar:
 
@@ -77,7 +82,10 @@ npm run test
 npm run build
 ```
 
+## Instalar como app
+
+O MOVI é um PWA. Em produção, abra o endereço usando HTTPS e escolha “Instalar app” ou “Adicionar à tela de início” no menu do navegador. No Android/Chrome, a seção **Configurações → Usar como aplicativo** mostra o botão de instalação quando o navegador disponibiliza o prompt; no iPhone/iPad, use **Compartilhar → Adicionar à Tela de Início** no Safari.
+
 ## Aviso de saúde
 
 O MOVI tem finalidade educativa e não substitui a avaliação de um profissional de educação física ou médico. Pessoas com condições de saúde, lesões, gravidez ou sintomas novos devem buscar orientação individual antes de iniciar ou adaptar os exercícios.
-

@@ -2,6 +2,13 @@ export type Person = 'breno' | 'leticia';
 export type Theme = 'light' | 'dark';
 export type Weekday = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 
+export interface ExerciseMedia {
+  gifUrl: string;
+  gifSourceUrl: string;
+  gifSourceLabel: string;
+  youtubeUrl: string;
+}
+
 export interface Exercise {
   id: string;
   name: string;
@@ -71,4 +78,3 @@ export interface AppState {
 }
 
 export type AppView = 'home' | 'person' | 'workout' | 'library' | 'history' | 'guide';
-
