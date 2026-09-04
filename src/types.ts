@@ -2,11 +2,21 @@ export type Person = 'breno' | 'leticia';
 export type Theme = 'light' | 'dark';
 export type Weekday = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 
+export interface ExerciseGif {
+  url: string;
+  label: string;
+  sourceUrl: string;
+  sourceLabel: string;
+}
+
 export interface ExerciseMedia {
-  gifUrl: string;
-  gifSourceUrl: string;
-  gifSourceLabel: string;
+  gifs: ExerciseGif[];
   youtubeUrl: string;
+}
+
+export interface ExerciseTeaching {
+  focus: string;
+  cues: string[];
 }
 
 export interface Exercise {
@@ -24,7 +34,15 @@ export interface Exercise {
   commonMistakes: string[];
   beginnersTips: string[];
   easierAlternative: string;
+  easierId?: string;
   substitutes: string[];
+}
+
+export interface CardioOption {
+  name: string;
+  duration: string;
+  intensity: string;
+  instructions: string;
 }
 
 export interface WorkoutExercise {
@@ -47,6 +65,7 @@ export interface WorkoutDay {
   finish: string;
   safety: string;
   exercises: WorkoutExercise[];
+  cardio: CardioOption[];
 }
 
 export interface ExerciseLog {

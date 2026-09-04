@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ExerciseIllustration } from './components/ExerciseIllustration';
+import { ExerciseIllustration, ExerciseMediaGallery } from './components/ExerciseIllustration';
 import { Icon, type IconName } from './components/Icon';
-import { dayLabels, dayNames, exerciseCatalog, formatDate, formatFullDate, getExerciseMedia, personMeta, weekdayFromDate, workoutPlans } from './data';
+import { dayLabels, dayNames, exerciseCatalog, formatDate, formatFullDate, getExerciseMedia, getExerciseTeaching, personMeta, weekdayFromDate, workoutPlans } from './data';
 import { defaultState, loadState, saveState } from './storage';
 import type { AppState, AppView, Exercise, Person, Weekday, WorkoutDay, WorkoutExercise } from './types';
 
@@ -16,6 +16,58 @@ const navItems: { id: AppView; label: string; icon: IconName }[] = [
   { id: 'history', label: 'Histórico', icon: 'chart' },
   { id: 'guide', label: 'Guia', icon: 'info' },
 ];
+
+interface ExerciseRowProps {
+  item: WorkoutExercise;
+  workout: WorkoutDay;
+  exercise: Exercise;
+  index: number;
+  isCurrent: boolean;
+  done: boolean;
+  log: { weight: string; reps: string };
+  focusCue: string;
+  onOpenExercise: (exerciseId: string) => void;
+  onMark: (workout: WorkoutDay, item: WorkoutExercise, completed: boolean) => void;
+  onUpdateLog: (workout: WorkoutDay, item: WorkoutExercise, field: 'weight' | 'reps', value: string) => void;
+  onStartRest: (seconds: number) => void;
+  onSwap: (target: { workout: WorkoutDay; item: WorkoutExercise; exercise: Exercise }) => void;
+}
+
+function ExerciseRow({ item, workout, exercise, index, isCurrent, done, log, focusCue, onOpenExercise, onMark, onUpdateLog, onStartRest, onSwap }: ExerciseRowProps) {
+  return (
+    <article className={`exercise-row ${isCurrent ? 'is-current' : ''} ${done ? 'is-done' : ''}`}>
+      <div className="exercise-row__number">{done ? <Icon name="check" size={17} /> : String(index + 1).padStart(2, '0')}</div>
+      <div className="exercise-row__body">
+        <div className="exercise-row__heading">
+          <button className="exercise-name-button" onClick={() => onOpenExercise(exercise.id)}>
+            <span className="tag">{exercise.category}</span>
+            <h3>{exercise.name}</h3>
+            <p>{exercise.equipment}</p>
+          </button>
+          <button className={`check-btn ${done ? 'is-checked' : ''}`} aria-label={done ? `Desmarcar ${exercise.name}` : `Marcar ${exercise.name} como concluído`} aria-pressed={done} onClick={() => onMark(workout, item, !done)}>
+            {done && <Icon name="check" size={18} />}
+          </button>
+        </div>
+        <div className="prescription-row">
+          <div><span className="metric-label">Séries</span><strong>{item.sets}</strong></div>
+          <div><span className="metric-label">Reps / tempo</span><strong>{item.reps}</strong></div>
+          <div><span className="metric-label">Descanso</span><strong>{item.rest}s</strong></div>
+        </div>
+        <p className="exercise-cue">{item.cue}</p>
+        <p className="exercise-focus"><Icon name="sparkle" size={13} /> <span><strong>Foco:</strong> {focusCue}</span></p>
+        <div className="log-row">
+          <label><span>Carga</span><div className="input-with-suffix"><input type="number" min="0" inputMode="decimal" value={log.weight} onChange={(event) => onUpdateLog(workout, item, 'weight', event.target.value)} placeholder="0" /><em>kg</em></div></label>
+          <label><span>Reps feitas</span><input type="number" min="0" inputMode="numeric" value={log.reps} onChange={(event) => onUpdateLog(workout, item, 'reps', event.target.value)} placeholder="—" /></label>
+          <button className="timer-button" onClick={() => onStartRest(item.rest)}><Icon name="clock" size={15} /> {item.rest}s</button>
+        </div>
+        <div className="exercise-actions">
+          <button className="text-button" onClick={() => onOpenExercise(exercise.id)}>Ver execução <Icon name="arrow" size={14} /></button>
+          <button className="text-button text-button--swap" onClick={() => onSwap({ workout, item, exercise })}><Icon name="swap" size={14} /> Trocar</button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function App() {
   const [state, setState] = useState<AppState>(() => loadState());
@@ -151,12 +203,12 @@ function App() {
   };
 
   const renderView = () => {
-    if (view === 'workout') return <WorkoutView workout={selectedWorkout} />;
-    if (view === 'person') return <PersonView />;
-    if (view === 'library') return <LibraryView />;
-    if (view === 'history') return <HistoryView />;
-    if (view === 'guide') return <GuideView />;
-    return <HomeView />;
+    if (view === 'workout') return renderWorkoutView(selectedWorkout);
+    if (view === 'person') return renderPersonView();
+    if (view === 'library') return renderLibraryView();
+    if (view === 'history') return renderHistoryView();
+    if (view === 'guide') return renderGuideView();
+    return HomeView();
   };
 
   function PageHeading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description?: string; action?: React.ReactNode }) {
@@ -217,7 +269,7 @@ function App() {
     );
   }
 
-  function PersonView() {
+  function renderPersonView() {
     const completedCount = plan.filter((item) => state.completedWorkouts[workoutKey(person, item.id)]).length;
     return (
       <>
@@ -225,7 +277,7 @@ function App() {
         <section className={`person-banner person-banner--${meta.accent}`}><div className="avatar avatar--large">{meta.avatar}</div><div><span className="micro-label">Foco deste ciclo</span><h2>{completedCount} de {plan.length} sessões concluídas</h2><p>Quatro encontros consistentes formam uma semana completa.</p></div><div className="person-banner__stat"><strong>{Math.round((completedCount / plan.length) * 100)}%</strong><span>semana</span></div></section>
         <div className="priority-row">{(person === 'breno' ? ['Peito', 'Costas', 'Bíceps', 'Pernas'] : ['Pernas', 'Glúteos', 'Posterior', 'Abdômen']).map((item) => <span key={item} className="priority-chip"><span />{item}</span>)}</div>
         <section className="workout-list">{plan.map((item, index) => <WorkoutSummary key={item.id} workout={item} index={index} />)}</section>
-        <section className="small-note"><Icon name="info" size={18} /><p>A divisão deixa pelo menos um dia de recuperação entre os blocos e trabalha todos os grupos musculares principais.</p></section>
+        <section className="small-note"><Icon name="info" size={18} /><p>A divisão deixa pelo menos um dia de recuperação entre os blocos e trabalha todos os grupos musculares principais. Em cada sessão, escolha uma das opções de aeróbico ao final.</p></section>
       </>
     );
   }
@@ -235,7 +287,7 @@ function App() {
     return <button className={`workout-summary workout-summary--${meta.accent} ${done ? 'is-done' : ''}`} onClick={() => openWorkout(workout)}><div className="workout-summary__day"><span>{dayLabels[state.schedule[person][index]]}</span><strong>{done ? <Icon name="check" size={18} /> : String(index + 1).padStart(2, '0')}</strong></div><div className="workout-summary__main"><div className="workout-summary__top"><span className="tag">{workout.label}</span><span className="duration"><Icon name="clock" size={14} /> {workout.duration}</span></div><h3>{workout.title}</h3><p>{workout.objective}</p><div className="tag-row">{workout.muscleGroups.map((group) => <span key={group} className="tag tag--muted">{group}</span>)}</div></div><Icon name="arrow" size={18} className="workout-arrow" /></button>;
   }
 
-  function WorkoutView({ workout }: { workout: WorkoutDay }) {
+  function renderWorkoutView(workout: WorkoutDay) {
     const complete = Boolean(state.completedWorkouts[workoutKey(person, workout.id)]);
     const doneCount = workout.exercises.filter((item) => state.completedExercises[sessionKey(person, workout.id, item.exerciseId)]).length;
     const activeIndex = Math.max(0, workout.exercises.findIndex((item) => !state.completedExercises[sessionKey(person, workout.id, item.exerciseId)]));
@@ -245,7 +297,35 @@ function App() {
         <section className={`workout-header workout-header--${meta.accent}`}><div className="workout-header__top"><span className="tag tag--dark">{workout.label}</span><span className="duration"><Icon name="clock" size={14} /> {workout.duration}</span></div><h1>{workout.title}</h1><p>{workout.objective}</p><div className="workout-header__bottom"><div className="workout-progress"><div className="progress-line progress-line--light"><span style={{ width: `${(doneCount / workout.exercises.length) * 100}%` }} /></div><span>{doneCount} de {workout.exercises.length} exercícios</span></div><button className="header-complete" onClick={() => markWorkout(workout, !complete)}>{complete ? <><Icon name="check" size={15} /> Concluído</> : 'Concluir treino'}</button></div></section>
         <section className="warmup-card"><div className="warmup-card__icon"><Icon name="flame" size={21} /></div><div><span className="eyebrow">Antes de começar · 6–8 min</span><h2>Acorde o corpo</h2><ul>{workout.warmup.map((item) => <li key={item}>{item}</li>)}</ul></div></section>
         <div className="exercise-section-heading"><div><p className="eyebrow">Sequência recomendada</p><h2>Seu treino</h2></div><span className="small-status"><span className="status-dot" /> {complete ? 'Feito por hoje' : `Próximo: ${activeIndex + 1}`}</span></div>
-        <section className="exercise-list">{workout.exercises.map((item, index) => <ExerciseRow key={item.exerciseId} item={item} workout={workout} index={index} isCurrent={index === activeIndex && !complete} />)}</section>
+        <section className="exercise-list">{workout.exercises.map((item, index) => {
+          const key = sessionKey(person, workout.id, item.exerciseId);
+          const exercise = getWorkoutExercise(workout, item);
+          return <ExerciseRow
+            key={item.exerciseId}
+            item={item}
+            workout={workout}
+            exercise={exercise}
+            index={index}
+            isCurrent={index === activeIndex && !complete}
+            done={Boolean(state.completedExercises[key])}
+            log={state.exerciseLogs[key] ?? { weight: '', reps: '' }}
+            focusCue={getExerciseTeaching(exercise).focus}
+            onOpenExercise={(exerciseId) => setExerciseDetailId(exerciseId)}
+            onMark={markExercise}
+            onUpdateLog={updateLog}
+            onStartRest={(seconds) => { setRestTotal(seconds); setRestSeconds(seconds); }}
+            onSwap={(target) => setReplacementTarget(target)}
+          />;
+        })}</section>
+        <section className={`cardio-card cardio-card--${meta.accent}`}>
+          <div className="cardio-card__heading">
+            <span className="cardio-card__icon"><Icon name="flame" size={20} /></span>
+            <div><span className="eyebrow">Final do treino · escolha 1</span><h2>Aeróbico para fechar</h2></div>
+          </div>
+          <p className="cardio-card__lead">{person === 'leticia' ? 'Uma opção simples para aumentar o movimento da semana e apoiar o objetivo de emagrecimento.' : 'Uma finalização leve para desenvolver condicionamento sem tirar o foco do treino de força.'}</p>
+          <div className="cardio-options">{workout.cardio.map((option, index) => <article className="cardio-option" key={option.name}><div className="cardio-option__top"><span className="cardio-option__number">0{index + 1}</span><div><h3>{option.name}</h3><p>{option.duration} · {option.intensity}</p></div></div><span className="cardio-option__instructions">{option.instructions}</span></article>)}</div>
+          <p className="cardio-card__note"><Icon name="info" size={15} /> Faça apenas uma opção. Se estiver muito cansada, reduza o tempo ou encerre com caminhada leve.</p>
+        </section>
         <section className="finish-card"><div className="finish-card__top"><span className="finish-icon"><Icon name="check" size={20} /></span><div><span className="eyebrow">Finalização</span><h3>Desacelere com intenção</h3></div></div><p>{workout.finish}</p><div className="safety-inline"><Icon name="info" size={16} /><span>{workout.safety}</span></div></section>
         <section className="notes-card"><div className="section-title-row"><div><p className="eyebrow">Registro rápido</p><h2>Como foi?</h2></div><Icon name="note" size={19} /></div><textarea value={state.notes[workoutKey(person, workout.id)] ?? ''} onChange={(event) => updateNote(workout, event.target.value)} placeholder="Anote sensações, ajustes ou o que quer lembrar…" rows={3} /></section>
         {restSeconds > 0 && <RestTimer />}
@@ -253,31 +333,23 @@ function App() {
     );
   }
 
-  function ExerciseRow({ item, workout, index, isCurrent }: { item: WorkoutExercise; workout: WorkoutDay; index: number; isCurrent: boolean }) {
-    const exercise = getWorkoutExercise(workout, item);
-    const key = sessionKey(person, workout.id, item.exerciseId);
-    const done = Boolean(state.completedExercises[key]);
-    const log = state.exerciseLogs[key] ?? { weight: '', reps: '' };
-    return <article className={`exercise-row ${isCurrent ? 'is-current' : ''} ${done ? 'is-done' : ''}`}><div className="exercise-row__number">{done ? <Icon name="check" size={17} /> : String(index + 1).padStart(2, '0')}</div><div className="exercise-row__body"><div className="exercise-row__heading"><button className="exercise-name-button" onClick={() => setExerciseDetailId(exercise.id)}><span className="tag">{exercise.category}</span><h3>{exercise.name}</h3><p>{exercise.equipment}</p></button><button className={`check-btn ${done ? 'is-checked' : ''}`} aria-label={done ? `Desmarcar ${exercise.name}` : `Marcar ${exercise.name} como concluído`} aria-pressed={done} onClick={() => markExercise(workout, item, !done)}>{done && <Icon name="check" size={18} />}</button></div><div className="prescription-row"><div><span className="metric-label">Séries</span><strong>{item.sets}</strong></div><div><span className="metric-label">Reps / tempo</span><strong>{item.reps}</strong></div><div><span className="metric-label">Descanso</span><strong>{item.rest}s</strong></div></div><p className="exercise-cue">{item.cue}</p><div className="log-row"><label><span>Carga</span><div className="input-with-suffix"><input type="number" min="0" inputMode="decimal" value={log.weight} onChange={(event) => updateLog(workout, item, 'weight', event.target.value)} placeholder="0" /><em>kg</em></div></label><label><span>Reps feitas</span><input type="number" min="0" inputMode="numeric" value={log.reps} onChange={(event) => updateLog(workout, item, 'reps', event.target.value)} placeholder="—" /></label><button className="timer-button" onClick={() => { setRestTotal(item.rest); setRestSeconds(item.rest); }}><Icon name="clock" size={15} /> {item.rest}s</button></div><div className="exercise-actions"><button className="text-button" onClick={() => setExerciseDetailId(exercise.id)}>Ver execução <Icon name="arrow" size={14} /></button><button className="text-button text-button--swap" onClick={() => setReplacementTarget({ workout, item, exercise })}><Icon name="swap" size={14} /> Trocar</button></div></div></article>;
-  }
-
   function RestTimer() {
     const percent = restTotal ? ((restTotal - restSeconds) / restTotal) * 100 : 0;
     return <div className="rest-timer"><div className="rest-timer__ring" style={{ '--progress': `${percent}%` } as React.CSSProperties}><strong>{Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, '0')}</strong><small>descanso</small></div><div><span className="eyebrow">Respira. Você está no ritmo.</span><h3>Próxima série em breve</h3><div className="timer-actions"><button className="button button--soft" onClick={() => setRestSeconds((value) => Math.max(0, value - 15))}>−15s</button><button className="button button--primary" onClick={() => setRestSeconds(0)}>Encerrar</button><button className="button button--soft" onClick={() => setRestSeconds((value) => value + 15)}>+15s</button></div></div></div>;
   }
 
-  function LibraryView() {
+  function renderLibraryView() {
     const exercises = Object.values(exerciseCatalog).filter((exercise) => `${exercise.name} ${exercise.category} ${exercise.primary}`.toLowerCase().includes(libraryQuery.toLowerCase()));
     return <><PageHeading eyebrow="Biblioteca MOVI" title="Aprenda o movimento" description="Fichas curtas para treinar com mais autonomia e menos dúvida." /><div className="search-field"><Icon name="search" size={18} /><input value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Buscar exercício, músculo ou equipamento" aria-label="Buscar exercício" /></div><div className="library-grid">{exercises.map((exercise) => <button className="library-card" key={exercise.id} onClick={() => setExerciseDetailId(exercise.id)}><ExerciseIllustration exercise={exercise} accent={meta.accent} compact /><div className="library-card__content"><span className="tag">{exercise.category}</span><h3>{exercise.name}</h3><p>{exercise.equipment}</p><span className="library-link">Abrir ficha <Icon name="arrow" size={13} /></span></div></button>)}</div>{exercises.length === 0 && <div className="empty-state"><Icon name="search" size={25} /><h3>Nenhum movimento encontrado</h3><p>Tente buscar por “peito”, “pernas” ou “cabo”.</p></div>}</>;
   }
 
-  function HistoryView() {
+  function renderHistoryView() {
     const entries = state.history.filter((entry) => entry.person === person);
     const lastSeven = entries.slice(0, 7);
     return <><PageHeading eyebrow="Consistência, não perfeição" title={`Histórico de ${meta.name}`} description="Uma visão simples do que você já colocou em prática." action={<button className="button button--soft" onClick={() => setShowSettings(true)}><Icon name="refresh" size={16} /> Gerenciar dados</button>} /><section className="stats-grid"><div className="stat-card"><span className="stat-card__icon stat-card__icon--lime"><Icon name="trophy" size={18} /></span><strong>{entries.length}</strong><span>treinos registrados</span></div><div className="stat-card"><span className="stat-card__icon stat-card__icon--coral"><Icon name="flame" size={18} /></span><strong>{entries.length ? Math.min(entries.length, 4) : 0}</strong><span>melhor semana</span></div><div className="stat-card"><span className="stat-card__icon stat-card__icon--blue"><Icon name="dumbbell" size={18} /></span><strong>{entries.reduce((sum, entry) => sum + entry.completedExercises, 0)}</strong><span>exercícios feitos</span></div></section><section className="history-panel"><div className="section-title-row"><div><p className="eyebrow">Mais recentes</p><h2>Treinos concluídos</h2></div><span className="history-count">{entries.length} no total</span></div>{lastSeven.length ? <div className="history-list">{lastSeven.map((entry) => <div className="history-item" key={entry.id}><div className="history-date"><strong>{new Date(`${entry.date}T12:00:00`).getDate()}</strong><span>{new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(`${entry.date}T12:00:00`)).replace('.', '')}</span></div><div><h3>{entry.workoutTitle}</h3><p>{entry.completedExercises}/{entry.totalExercises} exercícios · {formatDate(new Date(`${entry.date}T12:00:00`))}</p></div><span className="history-check"><Icon name="check" size={15} /></span></div>)}</div> : <div className="empty-state empty-state--small"><Icon name="chart" size={25} /><h3>Seu histórico começa aqui</h3><p>Conclua o primeiro treino para acompanhar a sua consistência.</p></div>}</section></>;
   }
 
-  function GuideView() {
+  function renderGuideView() {
     const guideCards = [
       { icon: 'dumbbell' as IconName, title: 'Escolha a carga inicial', text: 'Comece com uma carga leve o bastante para aprender o caminho. As últimas repetições devem exigir atenção, mas sem perder postura ou prender a respiração.' },
       { icon: 'arrow' as IconName, title: 'Quando aumentar', text: 'Quando alcançar o topo da faixa em todas as séries com técnica consistente, aumente pouco: em geral 2–5% e volte para a parte baixa da faixa.' },
@@ -285,13 +357,16 @@ function App() {
       { icon: 'sparkle' as IconName, title: 'Por que não falhar sempre', text: 'Treinar até a falha não é necessário para cada série e pode degradar a técnica. Deixe algumas repetições possíveis, principalmente no começo.' },
       { icon: 'info' as IconName, title: 'Dor normal x sinal de alerta', text: 'Cansaço e ardor muscular podem acontecer. Dor aguda, incomum, articular, formigamento ou piora persistente pedem parar e buscar avaliação.' },
       { icon: 'flame' as IconName, title: 'Aquecimento', text: 'Eleve gradualmente a temperatura com 5–7 min de caminhada, bike ou elíptico e faça uma série leve do primeiro movimento.' },
+      { icon: 'flame' as IconName, title: 'Aeróbico com constância', text: 'No final de cada sessão, escolha uma opção leve ou moderada. O emagrecimento depende do conjunto da rotina, alimentação, sono e consistência — não de se esgotar em um treino.' },
     ];
-    return <><PageHeading eyebrow="Treinar com clareza" title="Guia de bolso" description="O básico para tomar boas decisões durante a semana." /><section className="guide-grid">{guideCards.map((card) => <article className="guide-card" key={card.title}><span className="guide-icon"><Icon name={card.icon} size={20} /></span><h3>{card.title}</h3><p>{card.text}</p></article>)}</section><section className="disclaimer-card"><div className="disclaimer-card__icon"><Icon name="info" size={23} /></div><div><span className="eyebrow">Importante</span><h2>O MOVI é educativo</h2><p>Este aplicativo não substitui avaliação de um profissional de educação física ou médico. Se você tem uma condição de saúde, lesão, está grávida ou sente dor incomum, procure orientação individual antes de treinar.</p></div></section><section className="sources-panel"><div className="section-title-row"><div><p className="eyebrow">Pesquisa registrada</p><h2>Fontes que orientam o app</h2></div><Icon name="external" size={18} /></div><a href="https://odphp.health.gov/sites/default/files/2019-09/Physical_Activity_Guidelines_2nd_edition.pdf" target="_blank" rel="noreferrer">Physical Activity Guidelines for Americans <Icon name="external" size={14} /></a><a href="https://acsm.org/wp-content/uploads/2025/01/Progression-Models-in-Resistance-Training-for-Healthy-Adults-Simplified.pdf" target="_blank" rel="noreferrer">ACSM · Progression Models in Resistance Training <Icon name="external" size={14} /></a><a href="https://www.who.int/docs/default-source/physical-activity/information-sheet-global-recommendations-on-physical-activity-for-health/physical-activity-recommendations-18-64years.pdf" target="_blank" rel="noreferrer">WHO · Global recommendations on physical activity <Icon name="external" size={14} /></a><a href="https://www.acefitness.org/resources/everyone/exercise-library/" target="_blank" rel="noreferrer">ACE · Exercise Library <Icon name="external" size={14} /></a></section></>;
+    return <><PageHeading eyebrow="Treinar com clareza" title="Guia de bolso" description="O básico para tomar boas decisões durante a semana." /><section className="guide-grid">{guideCards.map((card) => <article className="guide-card" key={card.title}><span className="guide-icon"><Icon name={card.icon} size={20} /></span><h3>{card.title}</h3><p>{card.text}</p></article>)}</section><section className="disclaimer-card"><div className="disclaimer-card__icon"><Icon name="info" size={23} /></div><div><span className="eyebrow">Importante</span><h2>O MOVI é educativo</h2><p>Este aplicativo não substitui avaliação de um profissional de educação física ou médico. Se você tem uma condição de saúde, lesão, está grávida ou sente dor incomum, procure orientação individual antes de treinar.</p></div></section><section className="sources-panel"><div className="section-title-row"><div><p className="eyebrow">Pesquisa registrada</p><h2>Fontes que orientam o app</h2></div><Icon name="external" size={18} /></div><a href="https://odphp.health.gov/sites/default/files/2019-09/Physical_Activity_Guidelines_2nd_edition.pdf" target="_blank" rel="noreferrer">Physical Activity Guidelines for Americans <Icon name="external" size={14} /></a><a href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noreferrer">ACSM · Resistance Training Guidelines 2026 <Icon name="external" size={14} /></a><a href="https://www.who.int/initiatives/behealthy/physical-activity" target="_blank" rel="noreferrer">WHO · Physical activity recommendations <Icon name="external" size={14} /></a><a href="https://www.acefitness.org/resources/everyone/exercise-library/" target="_blank" rel="noreferrer">ACE · Exercise Library <Icon name="external" size={14} /></a></section></>;
   }
 
   function ExerciseModal({ exercise }: { exercise: Exercise }) {
     const media = getExerciseMedia(exercise.id);
-    return <div className="modal-backdrop" role="presentation" onMouseDown={() => setExerciseDetailId(null)}><div className="modal-sheet exercise-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-top"><span className="eyebrow">Ficha do movimento</span><button className="icon-button" onClick={() => setExerciseDetailId(null)} aria-label="Fechar ficha"><Icon name="close" size={20} /></button></div><ExerciseIllustration exercise={exercise} accent={meta.accent} /><div className="modal-title-row"><div><span className="tag">{exercise.category}</span><h2 id="exercise-title">{exercise.name}</h2><p>{exercise.primary} · {exercise.equipment}</p></div><span className="difficulty-badge">{exercise.difficulty}</span></div><div className="detail-pills"><span>Principal · {exercise.primary}</span>{exercise.secondary.slice(0, 2).map((item) => <span key={item}>Secundário · {item}</span>)}</div>{media && <section className="media-actions" aria-label="Mídia do exercício"><a className="media-action media-action--youtube" href={media.youtubeUrl} target="_blank" rel="noreferrer"><span className="media-action__icon"><Icon name="play" size={15} /></span><span><strong>Ver vídeo curto no YouTube</strong><small>Busca específica para {exercise.name}</small></span><Icon name="external" size={15} /></a><p className="media-credit"><Icon name="info" size={14} /> GIF por {media.gifSourceLabel}. <a href={media.gifSourceUrl} target="_blank" rel="noreferrer">Abrir fonte</a></p></section>}<DetailSection title="Postura inicial" text={exercise.startingPosture} /><DetailSection title="Como executar" list={exercise.execution} /><DetailSection title="Respiração" text={exercise.breathing} /><DetailSection title="Erros comuns" list={exercise.commonMistakes} warning /><DetailSection title="Dicas para começar" list={exercise.beginnersTips} /><div className="alternatives-box"><div><span className="eyebrow">Se precisar adaptar</span><p><strong>Mais fácil:</strong> {exercise.easierAlternative}</p><p><strong>Se o equipamento estiver ocupado:</strong> {exercise.substitutes.map((id) => exerciseCatalog[id]?.name).filter(Boolean).join(' · ')}</p></div><Icon name="swap" size={20} /></div><div className="pain-alert"><Icon name="info" size={17} /><span>Interrompa se houver dor incomum, aguda ou que piora. Busque avaliação se ela persistir.</span></div><a className="source-button" href={exercise.sourceUrl} target="_blank" rel="noreferrer">Abrir referência técnica ACE <Icon name="external" size={15} /></a></div></div>;
+    const teaching = getExerciseTeaching(exercise);
+    const alternativeIds = Array.from(new Set([...(exercise.easierId ? [exercise.easierId] : []), ...exercise.substitutes]));
+    return <div className="modal-backdrop" role="presentation" onMouseDown={() => setExerciseDetailId(null)}><div className="modal-sheet exercise-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-top"><span className="eyebrow">Ficha do movimento</span><button className="icon-button" onClick={() => setExerciseDetailId(null)} aria-label="Fechar ficha"><Icon name="close" size={20} /></button></div><ExerciseMediaGallery exercise={exercise} accent={meta.accent} /><div className="modal-title-row"><div><span className="tag">{exercise.category}</span><h2 id="exercise-title">{exercise.name}</h2><p>{exercise.primary} · {exercise.equipment}</p></div><span className="difficulty-badge">{exercise.difficulty}</span></div><div className="detail-pills"><span>Principal · {exercise.primary}</span>{exercise.secondary.slice(0, 2).map((item) => <span key={item}>Secundário · {item}</span>)}</div>{media && <section className="media-actions" aria-label="Mídia do exercício"><a className="media-action media-action--youtube" href={media.youtubeUrl} target="_blank" rel="noreferrer"><span className="media-action__icon"><Icon name="play" size={15} /></span><span><strong>Ver vídeo curto no YouTube</strong><small>Busca específica para {exercise.name}</small></span><Icon name="external" size={15} /></a><p className="media-credit"><Icon name="info" size={14} /> Veja as duas demonstrações acima e confirme a execução na fonte técnica. <a href={exercise.sourceUrl} target="_blank" rel="noreferrer">Abrir referência</a></p></section>}<DetailSection title="O que você deve sentir" text={teaching.focus} /><DetailSection title="Pontos para conferir" list={teaching.cues} /><DetailSection title="Postura inicial" text={exercise.startingPosture} /><DetailSection title="Como executar" list={exercise.execution} /><DetailSection title="Respiração" text={exercise.breathing} /><DetailSection title="Erros comuns" list={exercise.commonMistakes} warning /><DetailSection title="Dicas para começar" list={exercise.beginnersTips} /><div className="alternatives-box"><div><span className="eyebrow">Se precisar adaptar</span><p><strong>Mais fácil:</strong> {exercise.easierAlternative}</p><p><strong>Se o equipamento estiver ocupado:</strong> {alternativeIds.map((id) => exerciseCatalog[id]?.name).filter(Boolean).join(' · ')}</p></div><Icon name="swap" size={20} /></div><div className="pain-alert"><Icon name="info" size={17} /><span>Interrompa se houver dor incomum, aguda ou que piora. Busque avaliação se ela persistir.</span></div><a className="source-button" href={exercise.sourceUrl} target="_blank" rel="noreferrer">Abrir referência técnica ACE <Icon name="external" size={15} /></a></div></div>;
   }
 
   function DetailSection({ title, text, list, warning = false }: { title: string; text?: string; list?: string[]; warning?: boolean }) {
@@ -299,8 +374,9 @@ function App() {
   }
 
   function ReplaceModal({ target }: { target: { workout: WorkoutDay; item: WorkoutExercise; exercise: Exercise } }) {
-    const options = target.exercise.substitutes.map((id) => exerciseCatalog[id]).filter(Boolean);
-    return <div className="modal-backdrop" role="presentation" onMouseDown={() => setReplacementTarget(null)}><div className="modal-sheet replace-modal" role="dialog" aria-modal="true" aria-labelledby="replace-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-top"><div><span className="eyebrow">Adaptar sem perder o foco</span><h2 id="replace-title">Trocar exercício</h2></div><button className="icon-button" onClick={() => setReplacementTarget(null)} aria-label="Fechar"><Icon name="close" size={20} /></button></div><p className="modal-lead">Escolha uma alternativa para <strong>{target.exercise.name}</strong>. O registro continuará ligado a esta etapa do treino.</p><div className="replacement-options">{options.map((option) => <button key={option.id} className="replacement-option" onClick={() => replaceExercise(target.workout, target.item, option.id)}><div><span className="tag">{option.category}</span><h3>{option.name}</h3><p>{option.equipment}</p></div><Icon name="arrow" size={17} /></button>)}</div></div></div>;
+    const optionIds = Array.from(new Set([...(target.exercise.easierId ? [target.exercise.easierId] : []), ...target.exercise.substitutes]));
+    const options = optionIds.map((id) => exerciseCatalog[id]).filter((option): option is Exercise => Boolean(option));
+    return <div className="modal-backdrop" role="presentation" onMouseDown={() => setReplacementTarget(null)}><div className="modal-sheet replace-modal" role="dialog" aria-modal="true" aria-labelledby="replace-title" onMouseDown={(event) => event.stopPropagation()}><div className="modal-top"><div><span className="eyebrow">Adaptar sem perder o foco</span><h2 id="replace-title">Trocar exercício</h2></div><button className="icon-button" onClick={() => setReplacementTarget(null)} aria-label="Fechar"><Icon name="close" size={20} /></button></div><p className="modal-lead">Escolha uma alternativa para <strong>{target.exercise.name}</strong>. As opções abaixo mantêm o objetivo do movimento, e a troca fica ligada a esta etapa do treino.</p><div className="replacement-options">{options.map((option) => <button key={option.id} className="replacement-option" onClick={() => replaceExercise(target.workout, target.item, option.id)}><div><div className="replacement-option__labels"><span className="tag">{option.category}</span>{option.id === target.exercise.easierId && <span className="swap-badge">Mais fácil</span>}</div><h3>{option.name}</h3><p>{option.equipment}</p></div><Icon name="arrow" size={17} /></button>)}</div>{options.length === 0 && <div className="empty-state empty-state--small"><Icon name="swap" size={25} /><h3>Sem troca cadastrada</h3><p>Use a orientação da ficha ou peça ajuda na academia.</p></div>}</div></div>;
   }
 
   function SettingsModal() {
