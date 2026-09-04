@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getExerciseMedia } from '../data';
 import type { Exercise, ExerciseGif } from '../types';
+import { Icon } from './Icon';
 
 interface Props { exercise: Exercise; accent?: 'lime' | 'coral'; compact?: boolean; }
 
@@ -40,8 +42,23 @@ export function ExerciseMediaGallery({ exercise, accent = 'lime' }: GalleryProps
   const media = getExerciseMedia(exercise.id);
   const gifs = media?.gifs.slice(0, 2) ?? [];
   const [failedGifs, setFailedGifs] = useState<string[]>([]);
+  const [fullscreenGif, setFullscreenGif] = useState<ExerciseGif | null>(null);
 
   useEffect(() => setFailedGifs([]), [exercise.id]);
+
+  useEffect(() => {
+    if (!fullscreenGif) return undefined;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreenGif(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [fullscreenGif]);
 
   if (gifs.length < 2) {
     return (
@@ -57,13 +74,14 @@ export function ExerciseMediaGallery({ exercise, accent = 'lime' }: GalleryProps
   };
 
   return (
+    <>
     <section className="media-gallery" aria-label={`Duas demonstrações de ${exercise.name}`}>
       {gifs.map((gif, index) => {
         const hasGif = !failedGifs.includes(gif.url);
         return (
           <figure className="media-gallery__item" key={gif.url}>
             <div className={`media-gallery__visual media-gallery__visual--${accent}`}>
-              {hasGif ? <img className="media-gallery__img" src={gif.url} alt={`${gif.label} de ${exercise.name}`} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" onError={() => markGifAsFailed(gif)} /> : <div className="media-gallery__error"><strong>Demonstração indisponível</strong><span>Use os passos e dicas abaixo como guia.</span></div>}
+              {hasGif ? <button type="button" className="media-gallery__open" onClick={() => setFullscreenGif(gif)} aria-label={`Abrir ${gif.label} de ${exercise.name} em tela cheia`}><img className="media-gallery__img" src={gif.url} alt={`${gif.label} de ${exercise.name}`} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" onError={() => markGifAsFailed(gif)} /><span className="media-gallery__hint"><Icon name="maximize" size={13} /> Tocar para ampliar</span></button> : <div className="media-gallery__error"><strong>Demonstração indisponível</strong><span>Use os passos e dicas abaixo como guia.</span></div>}
               <span className="media-gallery__count">{index + 1} / 2</span>
             </div>
             <figcaption className="media-gallery__caption">
@@ -74,5 +92,7 @@ export function ExerciseMediaGallery({ exercise, accent = 'lime' }: GalleryProps
         );
       })}
     </section>
+    {fullscreenGif && createPortal(<div className="gif-lightbox" role="presentation" onMouseDown={() => setFullscreenGif(null)}><div className="gif-lightbox__sheet" role="dialog" aria-modal="true" aria-label={`${fullscreenGif.label} de ${exercise.name} em tela cheia`} onMouseDown={(event) => event.stopPropagation()}><div className="gif-lightbox__top"><div><span className="eyebrow">Demonstração ampliada</span><strong>{exercise.name}</strong></div><button type="button" className="icon-button" onClick={() => setFullscreenGif(null)} aria-label="Fechar tela cheia"><Icon name="close" size={20} /></button></div><div className="gif-lightbox__visual"><img src={fullscreenGif.url} alt={`${fullscreenGif.label} de ${exercise.name}`} /></div><div className="gif-lightbox__bottom"><strong>{fullscreenGif.label}</strong><small>Fonte: <a href={fullscreenGif.sourceUrl} target="_blank" rel="noreferrer">{fullscreenGif.sourceLabel}</a></small><span>Toque fora da imagem ou em fechar para voltar</span></div></div></div>, document.body)}
+    </>
   );
 }

@@ -30,6 +30,7 @@ Essas fontes orientam o produto, mas não transformam o app em prescrição clí
 - A Letícia mantém todos os movimentos originais, mas começa com volume e descansos mais acessíveis. O emagrecimento não é atribuído ao aeróbico isoladamente: depende do conjunto de atividade, alimentação, sono e consistência.
 - O botão **Trocar** oferece alternativas equivalentes por padrão de movimento, incluindo uma opção marcada como “Mais fácil” quando há uma versão cadastrada.
 - Cada ficha exibe dois GIFs demonstrativos por meio do catálogo público versionado Exercise Gym GIFs DB; a galeria identifica a fonte de cada mídia e mantém a ilustração nativa do app como fallback quando necessário.
+- Cada GIF pode ser tocado para abrir uma visualização em tela cheia, com fechamento por botão, toque fora ou `Esc`, incluindo áreas seguras para iPhone.
 - Cada ficha foi ampliada com “o que você deve sentir” e pontos de conferência de postura, além da descrição, respiração, erros comuns e dicas para iniciantes já existentes.
 - Para facilitar a revisão em vídeo, cada ficha oferece uma busca específica no YouTube com o nome exato do movimento e os termos “execução correta” e “vídeo curto”. Como resultados do YouTube podem ser removidos ou mudar, o app não fixa um vídeo de terceiro sem confirmação de disponibilidade.
 
